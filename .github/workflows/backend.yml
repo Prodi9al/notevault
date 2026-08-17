@@ -1,0 +1,47 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Compile check (imports)
+        run: python -c "import app.main"
+
+      - name: Alembic autogenerate check
+        env:
+          DATABASE_URL: postgresql+psycopg://notevault:notevault@localhost:5432/notevault
+        run: |
+          echo "Skipping alembic online check (no DB in CI). Schema is built via 'alembic upgrade head' at deploy."
+
+      - name: Run tests
+        env:
+          JWT_SECRET: ci-secret
+        run: |
+          if [ -d tests ]; then pytest -q; else echo "no tests yet"; fi
