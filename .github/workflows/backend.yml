@@ -32,6 +32,9 @@ jobs:
           pip install pytest httpx
 
       - name: Compile check (imports)
+        env:
+          DATABASE_URL: postgresql+psycopg://notevault:notevault@localhost:5432/notevault
+          JWT_SECRET: ci-secret
         run: python -c "import app.main"
 
       - name: Alembic autogenerate check

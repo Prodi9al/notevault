@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://notevault:notevault@db:5432/notevault"
+    DATABASE_URL: str = "postgresql+psycopg://notevault:notevault@db:5432/notevault"
     JWT_SECRET: str = "change-me-in-production"
     JWT_EXPIRE_MINUTES: int = 60
 
