@@ -10,11 +10,11 @@ This runbook takes NoteVault from `docker compose up --build` (local) all the wa
 
 ---
 
-## 0. RACI — who owns what (your squad)
+## 0. RACI — who owns what (prodi9al's squad)
 
 | Role | Owner | Primary responsibilities in this runbook |
 | --- | --- | --- |
-| **Group Admin — Cloud Security Architect** | You | AWS architecture diagram, IAM roles/policies (least-privilege), Security Groups, env-var secret protection, final security sign-off |
+| **Group Admin — Cloud Security Architect** | prodi9al | AWS architecture diagram, IAM roles/policies (least-privilege), Security Groups, env-var secret protection, final security sign-off |
 | **Lil T — Frontend Developer** | Lil T | UI/UX responsive parity, API wiring, `NEXT_PUBLIC_API_URL`, wireframes for SDD |
 | **~.. — Backend Developer** | ~.. | App logic/API layer, auth (register/login/logout), upload routing (presigned URL flow), CORS contract |
 | **~shekiel — DBA** | ~shekiel | RDS schema/ERD matches Alembic migrations, CRUD review, query/index validation |
@@ -54,7 +54,7 @@ This runbook takes NoteVault from `docker compose up --build` (local) all the wa
 ```
 
 **Key decisions**
-- **One EC2 instance** is enough for the assignment (backend + frontend as two containers). Split into two hosts only if you want horizontal scaling behind the ALB.
+- **One EC2 instance** is enough for the assignment (backend + frontend as two containers). Split into two hosts only if horizontal scaling behind the ALB is needed.
 - **Files never touch EC2 disk** — uploads go browser → S3 (presigned PUT), downloads go browser → S3 (presigned GET). The backend only stores metadata in RDS.
 - **Backend uses an IAM instance role** scoped to the S3 bucket (no AWS keys on the box).
 - **`JWT_SECRET` lives in Secrets Manager / SSM**, injected as an env var at boot — never committed.
@@ -77,14 +77,14 @@ This runbook takes NoteVault from `docker compose up --build` (local) all the wa
 ### 3.1 VPC / networking assumptions
 Deploy into the **default VPC** (or a dedicated project VPC). Use:
 - **Public subnet**: ALB + EC2 (EC2 only needs outbound to internet for `docker pull` + package updates; inbound only via ALB SG).
-- **Private subnet (recommended)**: RDS. If you must use default VPC, at minimum lock RDS to the backend SG only.
+- **Private subnet (recommended)**: RDS. If the default VPC must be used, at minimum lock RDS to the backend SG only.
 
 ### 3.2 Security Groups
 
 | SG | Inbound | Outbound | Attached to |
 | --- | --- | --- | --- |
 | `sg-alb` | 443 from `0.0.0.0/0`; 80 from `0.0.0.0/0` (redirect) | to `sg-ec2` :80/:3000 | ALB |
-| `sg-ec2` | 80/3000 from `sg-alb` only; 22 from your admin IP only | 443 to `0.0.0.0/0` (SSM/docker/pull), 5432 to `sg-rds` | EC2 |
+| `sg-ec2` | 80/3000 from `sg-alb` only; 22 from prodi9al's admin IP only | 443 to `0.0.0.0/0` (SSM/docker/pull), 5432 to `sg-rds` | EC2 |
 | `sg-rds` | 5432 from `sg-ec2` only | none | RDS |
 | `sg-minio` (local only — not in AWS) | — | — | n/a |
 
@@ -127,7 +127,7 @@ Deploy into the **default VPC** (or a dedicated project VPC). Use:
 }
 ```
 
-Attach the **AWS managed** `AmazonSSMManagedInstanceCore` (for SSM Session Manager instead of open SSH, if you adopt it).
+Attach the **AWS managed** `AmazonSSMManagedInstanceCore` (for SSM Session Manager instead of open SSH, if prodi9al adopts it).
 
 > The backend's `get_s3_client()` leaves `aws_access_key_id`/`aws_secret_access_key` **unset** in prod, so boto3 automatically uses this instance role. That is the whole point of the "zero key" design.
 
@@ -207,7 +207,7 @@ ERD (text):
 ### 5.2 S3 bucket + CORS
 Create bucket `notevault` in the same region. **Block all public access** (presigned URLs only).
 
-CORS (allow the ALB/frontend origin — replace with your domain):
+CORS (allow the ALB/frontend origin — replace with prodi9al's domain):
 ```json
 [
   {
@@ -228,7 +228,7 @@ This is the **same** compose with prod env values. Write it to `/opt/notevault/d
 services:
   db:        # REMOVE in prod — use RDS instead
   backend:
-    image: <your-ecr-or-dockerhub>/notevault-backend:latest
+    image: <prodi9al's ecr-or-dockerhub>/notevault-backend:latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://notevault:<PW>@notevault.xyz.rds.amazonaws.com:5432/notevault
@@ -241,7 +241,7 @@ services:
       COOKIE_SECURE: "true"
     ports: ["8000:8000"]
   frontend:
-    image: <your-ecr-or-dockerhub>/notevault-frontend:latest
+    image: <prodi9al's ecr-or-dockerhub>/notevault-frontend:latest
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: https://notevault.example.com
