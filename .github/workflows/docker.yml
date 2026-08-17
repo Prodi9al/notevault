@@ -21,23 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: false
-          tags: notevault-backend:ci
+        run: docker build -f backend/Dockerfile -t notevault-backend:ci backend
 
       - name: Build frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: false
-          build-args: |
-            NEXT_PUBLIC_API_URL=http://localhost:8000
-          tags: notevault-frontend:ci
+        run: docker build -f frontend/Dockerfile --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 -t notevault-frontend:ci frontend
