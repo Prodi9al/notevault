@@ -20,6 +20,10 @@ export function UploadDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
+  // Client-side validation only — checks file type and size before upload
+// so the user gets instant feedback. The backend re-validates too (never
+// trust client-side checks alone).
+  
   function validate(file: File): string | undefined {
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -31,6 +35,11 @@ export function UploadDropzone({
     return undefined;
   }
 
+  // NOTE: validate() returns an error message on failure, but it's discarded
+// here — onSelect(null) clears the selection without showing *why* it was
+// rejected. Worth surfacing this message in the UI (e.g. via a toast or
+// inline text) before this ships.
+  
   function handleFile(file: File | null) {
     if (!file) return;
     const error = validate(file);
