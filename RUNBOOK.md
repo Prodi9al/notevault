@@ -8,18 +8,20 @@ This runbook takes NoteVault from `docker compose up --build` (local) all the wa
 
 > **No code changes are required to deploy.** Only environment variables change. The boto3 client factory already supports both MinIO and real S3, and the auth cookie + CORS are already production-shaped.
 
+> **Note on `aws-deployment-runbook.md`:** the repo also has an earlier, shorter draft runbook (single EC2, no ALB/Secrets Manager). **This file (`RUNBOOK.md`) is the one to follow** — it's the more complete version and matches what's actually implemented (direct `bcrypt`, presigned-URL S3 flow, instance role). Delete or archive the other draft before the Deployment Proof Portfolio submission so graders aren't looking at two conflicting architectures.
+
 ---
 
-## 0. RACI — who owns what (prodi9al's squad)
+## 0. RACI — who owns what (prodi9al's squad — 4 members, updated roster)
 
 | Role | Owner | Primary responsibilities in this runbook |
 | --- | --- | --- |
 | **Group Admin — Cloud Security Architect** | prodi9al | AWS architecture diagram, IAM roles/policies (least-privilege), Security Groups, env-var secret protection, final security sign-off |
-| **Lil T — Frontend Developer** | Lil T | UI/UX responsive parity, API wiring, `NEXT_PUBLIC_API_URL`, wireframes for SDD |
-| **~.. — Backend Developer** | ~.. | App logic/API layer, auth (register/login/logout), upload routing (presigned URL flow), CORS contract |
-| **~shekiel — DBA** | ~shekiel | RDS schema/ERD matches Alembic migrations, CRUD review, query/index validation |
-| **~WISDOM — DevOps** | ~WISDOM | EC2 provisioning, Docker deploy, S3 bucket + CORS, CloudWatch, ALB |
-| **@charlie_ryde — QA / Docs** | @charlie_ryde | Test plan (functional + security), Deployment Proof Portfolio, Final Technical Report + video |
+| **Frontend Developer** | Lil T | UI/UX responsive parity, API wiring, `NEXT_PUBLIC_API_URL`, wireframes for SDD |
+| **DBA + Backend Developer** | Shekiell | RDS schema/ERD matches Alembic migrations, CRUD review, query/index validation, app logic/API layer, auth (register/login/logout), upload routing (presigned URL flow), CORS contract |
+| **DevOps + QA / Docs** | +233 55 121 4109 | EC2 provisioning, Docker deploy, S3 bucket + CORS, CloudWatch, ALB, test plan (functional + security), Deployment Proof Portfolio, Final Technical Report + video |
+
+> Roster confirmed from the group chat as of 19 Aug — only 4 active members (prodi9al, Lil T, Shekiell, +233 55 121 4109). The course guide's suggested roles (Frontend/Backend/Cloud Architect/DBA/QA) are folded into these 4: DBA+Backend paired since both touch the same models/migrations; DevOps+QA/Docs paired since both live in the "prove it's deployed" phase.
 
 ---
 
@@ -147,7 +149,7 @@ JWT_SECRET=$(aws secretsmanager get-secret-value --secret-id notevault/jwt --que
 
 ---
 
-## 4. ~shekiel (DBA) — RDS schema & data
+## 4. Shekiell (DBA) — RDS schema & data
 
 ### 4.1 Provision RDS
 - Engine: **PostgreSQL 16** (matches local `postgres:16`).
@@ -179,7 +181,7 @@ ERD (text):
 └──────────┘         └──────────────┘
 ```
 
-### 4.3 CRUD & validation (review points for ~shekiel)
+### 4.3 CRUD & validation (review points for Shekiell)
 - **Create/Read/Update/Delete** all implemented in `backend/app/routers/documents.py` + `auth.py`.
 - **Validation**: Pydantic v2 schemas + DB-level constraints (`unique` on email, FKs, enums). Upload size/extension validated before any S3 call.
 - **Index optimization**: `ix_users_email`, `ix_documents_course_code` exist. The `/documents` list query filters on `course_code`, `category`, `title ILIKE`, ordered by `created_at desc` — confirm RDS query plan once populated.
@@ -187,7 +189,7 @@ ERD (text):
 
 ---
 
-## 5. ~WISDOM (DevOps) — EC2, S3, Docker, CloudWatch, ALB
+## 5. +233 55 121 4109 (DevOps) — EC2, S3, Docker, CloudWatch, ALB
 
 ### 5.1 Launch EC2
 - AMI: **Amazon Linux 2023** (or Ubuntu 22.04 LTS).
@@ -300,7 +302,7 @@ curl -f http://localhost:8000/health   # expect {"status":"ok"}
 
 ---
 
-## 7. ~.. (Backend) — API & upload flow review
+## 7. Shekiell (Backend) — API & upload flow review
 
 - **Auth**: `POST /auth/register`, `POST /auth/login` (sets cookie), `POST /auth/logout`, `GET /auth/me`. bcrypt hashing is **direct** (no `passlib`) to avoid the bcrypt-version warning — see `app/auth/security.py`.
 - **Upload routing** (no file ever hits the backend disk):
@@ -313,7 +315,7 @@ curl -f http://localhost:8000/health   # expect {"status":"ok"}
 
 ---
 
-## 8. @charlie_ryde (QA / Docs) — test plan & proof portfolio
+## 8. +233 55 121 4109 (QA / Docs) — test plan & proof portfolio
 
 ### 8.1 Functional test plan
 | # | Area | Steps | Expected |
@@ -398,6 +400,27 @@ curl -f http://localhost:8000/health   # expect {"status":"ok"}
 | `COOKIE_SECURE` | `false` | `true` |
 | `JWT_SECRET` | dummy in `.env` | Secrets Manager |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | `https://<alb-domain>` |
+
+---
+
+## 12. Sprint schedule — 19–25 Aug (6 days to deadline)
+
+The app itself is already built and CI-green (`backend/`, `frontend/`, Docker images, GitHub Actions all in place) — **nothing left is a coding task**, it's entirely deployment + documentation. Everyone below maps to their existing RACI role (Section 0); day numbers are calendar days, not effort-days, so overlap is expected.
+
+| Day | Date | prodi9al (Security/Admin) | Lil T (Frontend) | Shekiell (DBA + Backend) | +233 55 121 4109 (DevOps + QA/Docs) |
+|---|---|---|---|---|---|
+| 1 | Wed 19 | S3 bucket + IAM role/policy live (§3.3), request ACM cert if using a domain | Finalize SDD wireframes; confirm `NEXT_PUBLIC_API_URL` plan | Provision RDS, note endpoint (§4.1); freeze auth/upload code — no further changes expected pre-deploy | Launch EC2, install Docker (§5.1); draft functional + security test plan skeleton (§8.1–8.2) |
+| 2 | Thu 20 | Attach EC2 instance role; verify `sg-ec2`/`sg-rds` rules (§3.2) | Rebuild frontend once backend URL is reachable | `alembic upgrade head` against RDS; build ERD from live schema (§4.2); on call for auth/CORS issues during first deploy | Build & push images, write prod `docker-compose.yml`, first deploy (§5.3–5.4); start functional tests F1–F5 |
+| 3 | Fri 21 | Move `JWT_SECRET` + DB password to Secrets Manager (§3.4) | Responsive QA at 320/768/1280px; verify cookie behaviour over HTTPS | Review CORS contract against deployed frontend origin (§7); on call for DB/query issues | CloudWatch log groups + metrics live, let real traffic accumulate (§5.5, §6); finish F6–F11, start security tests S1–S7 |
+| 4 | Sat 22 | Full security review pass — grep for secrets, `git log -p -- .env`, confirm `.gitignore` (§8, this is your report narrative) | Assist with SDD wireframes | Assist with SDD (API contract notes + ERD) | ALB + ACM + target groups if time allows — bonus, skip if behind (§5.6); finish S1–S7, start Deployment Proof Portfolio screenshots (§8.3) |
+| 5 | Sun 23 | Architecture diagram (draw.io/Excalidraw) from §1 | UI wireframes | ERD diagram (§4.2) + Use Case Diagram | Compile System Design Document; keep collecting portfolio screenshots |
+| 6 | Mon 24 | Write IAM/SG/env-var security section of report | Write UI/UX section | Write DB/schema + API/auth sections | Write deployment/infra section; assemble Final Technical Report (max 15 pages) |
+| 7 | Tue 25 | Record individual contribution clip | Record individual contribution clip | Record individual contribution clip | Record individual contribution clip; merge video (15–20 min), final submit via form |
+
+**Notes**
+- Day 4's ALB/ACM step is the bonus item from the course guide (§3, Application Load Balancer row) — only chase it once Days 1–3's required items are all screenshotted and working. A working single-EC2 deploy beats a broken load-balanced one at submission time.
+- Delete the `db:` service line from the prod `docker-compose.yml` (flagged inline in §5.3) before Day 2's deploy — RDS replaces it.
+- With 4 people covering 6 course roles, Shekiell (DBA+Backend) and +233 55 121 4109 (DevOps+QA/Docs) each carry two workstreams back-to-back — the schedule sequences their pairs so the second half of each pair only starts once the first is stable (e.g. QA/Docs testing ramps up on Day 2–3, after DevOps has something live to test against).
 
 ---
 
