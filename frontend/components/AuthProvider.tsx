@@ -16,6 +16,10 @@ interface AuthContextValue {
   refresh: () => Promise<void>;
 }
 
+// App-wide auth state, made available via React Context so any component
+// can call useAuth() instead of each one independently checking who's
+// logged in.
+
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
@@ -26,6 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Asks the backend "who am I?" using the session cookie. Called once on
+// app load, and can be re-called manually after login/logout to refresh
+// the cached user without a full page reload.
+  
   const refresh = useCallback(async () => {
     try {
       const current = await api.getCurrentUser();
