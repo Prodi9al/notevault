@@ -104,6 +104,8 @@ export interface CategoryInfo {
   document_count: number;
 }
 
+// Custom error so components can distinguish "backend rejected this"
+// (with a real HTTP status + message) from generic network failures.
 class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -113,12 +115,22 @@ class ApiError extends Error {
   }
 }
 
+// Reads a cookie by name on the client. Note: this can only see
+// non-httpOnly cookies — our actual auth cookie is httpOnly by design
+// (JS can't read it, which protects against XSS), so this is a fallback
+// path and normally returns undefined. The real auth is carried by
+// credentials: "include" below, not this header.
 function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
   return match ? decodeURIComponent(match[2]) : undefined;
 }
 
+// Shared request wrapper used by every authenticated API call.
+// - Adds JSON headers automatically (skipped for FormData/file uploads)
+// - Always sends credentials so the httpOnly auth cookie goes with the request
+// - Normalizes errors: pulls the backend's "detail" message out of failed
+//   responses so the UI can show a clean message instead of a raw stack trace
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -161,6 +173,8 @@ async function safeGet<T>(path: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
+// Fallback list so the category filters still render even if the
+// /categories endpoint returns nothing (e.g. empty database on first run).
 const STATIC_CATEGORIES: CategoryInfo[] = [
   { category: "notes", document_count: 0 },
   { category: "past_questions", document_count: 0 },
