@@ -1,3 +1,8 @@
+// Single source of truth for all backend communication.
+// Every component imports from here instead of calling fetch() directly —
+// keeps the request/response shape consistent and makes the API contract
+// easy to see in one place.
+
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
