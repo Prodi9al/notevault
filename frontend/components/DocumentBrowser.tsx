@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, type Category, type DocumentItem, type PaginatedDocuments } from "@/lib/api";
+import { api, type Category, type CourseInfo, type DocumentItem, type PaginatedDocuments } from "@/lib/api";
 import { ApiError } from "@/lib/api";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentRow } from "@/components/DocumentRow";
@@ -71,16 +71,24 @@ export function DocumentBrowser({
     };
   }, [courseCode, category, q, page]);
 
+  const [catalogCourses, setCatalogCourses] = useState<CourseInfo[]>([]);
+
+  useEffect(() => {
+    api.getCourses().then(setCatalogCourses).catch(() => {});
+  }, []);
+
   const courses = useMemo(() => {
-    if (!data) return [];
     const map = new Map<string, number>();
-    for (const d of data.items) {
+    for (const c of catalogCourses) {
+      map.set(c.course_code, c.document_count);
+    }
+    for (const d of data?.items ?? []) {
       map.set(d.course_code, (map.get(d.course_code) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([code, count]) => ({ code, count }))
       .sort((a, b) => a.code.localeCompare(b.code));
-  }, [data]);
+  }, [catalogCourses, data]);
 
   function updateParams(next: Record<string, string | undefined>) {
     const sp = new URLSearchParams(params.toString());

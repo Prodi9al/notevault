@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, documents
+from app.routers import aggregates, auth, documents
 from app.storage.s3 import ensure_bucket
 
 
@@ -63,6 +63,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(aggregates.router)
 app.include_router(documents.router)
 
 

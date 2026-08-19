@@ -13,7 +13,7 @@ MAX_FILE_SIZE = 25 * 1024 * 1024
 
 
 def get_s3_client():
-    """Return a boto3 S3 client.
+    """Return a boto3 S3 client for backend-side operations (MinIO/AWS).
 
     Works with both MinIO (local) and real AWS S3:
       - If AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY are set, use them.
@@ -24,6 +24,26 @@ def get_s3_client():
     return boto3.client(
         "s3",
         endpoint_url=settings.S3_ENDPOINT_URL or None,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
+        region_name=settings.S3_REGION or None,
+        config=Config(signature_version="s3v4"),
+    )
+
+
+def get_presign_client():
+    """Return a boto3 client used only to *generate* presigned URLs.
+
+    Presigned URLs are signed against the endpoint host, so the host in the
+    URL must match where the *browser* will actually send the request.
+    Using S3_PUBLIC_ENDPOINT_URL as the signing endpoint avoids the broken
+    pattern of rewriting the host after signing (which invalidates the
+    signature and yields 403s). No network calls are made by this client.
+    """
+    presign_endpoint = settings.S3_PUBLIC_ENDPOINT_URL or settings.S3_ENDPOINT_URL or None
+    return boto3.client(
+        "s3",
+        endpoint_url=presign_endpoint,
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID or None,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY or None,
         region_name=settings.S3_REGION or None,
@@ -70,18 +90,11 @@ def validate_upload(filename: str, content_type: str, size: int) -> None:
         )
 
 
-def _rewrite_endpoint(url: str) -> str:
-    public = settings.S3_PUBLIC_ENDPOINT_URL
-    if public and settings.S3_ENDPOINT_URL:
-        return url.replace(settings.S3_ENDPOINT_URL, public, 1)
-    return url
-
-
 def generate_upload_presigned_url(
     s3_key: str, content_type: str, expires_in: int = 900
 ) -> str:
-    client = get_s3_client()
-    url = client.generate_presigned_url(
+    client = get_presign_client()
+    return client.generate_presigned_url(
         "put_object",
         Params={
             "Bucket": settings.S3_BUCKET_NAME,
@@ -90,11 +103,10 @@ def generate_upload_presigned_url(
         },
         ExpiresIn=expires_in,
     )
-    return _rewrite_endpoint(url)
 
 
 def generate_download_presigned_url(s3_key: str, expires_in: int = 300) -> str:
-    client = get_s3_client()
+    client = get_presign_client()
     return client.generate_presigned_url(
         "get_object",
         Params={"Bucket": settings.S3_BUCKET_NAME, "Key": s3_key},
