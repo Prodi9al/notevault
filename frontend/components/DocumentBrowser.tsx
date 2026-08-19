@@ -14,6 +14,11 @@ import { Button } from "@/components/Button";
 import { useAuth } from "@/components/AuthProvider";
 import { FileX2, SlidersHorizontal } from "lucide-react";
 
+// Main document listing view — powers the homepage grid/list and handles
+// filtering, search, pagination, and view mode (grid vs. row), all driven
+// by URL query params so a filtered view is shareable and works with
+// browser back/forward navigation.
+
 export function DocumentBrowser({
   initialCourse,
   initialCategory,
@@ -27,6 +32,10 @@ export function DocumentBrowser({
   const params = useSearchParams();
   const { user } = useAuth();
 
+  // Filter/search/page state lives in the URL, not local component state.
+// initialCourse/initialCategory/initialQuery let a page (like /courses/[code])
+// pre-set a filter without the user picking it manually.
+  
   const courseCode = (params.get("course_code") ?? initialCourse) || undefined;
   const category = (params.get("category") as Category | null) ?? initialCategory ?? undefined;
   const q = params.get("q") ?? initialQuery ?? undefined;
@@ -38,6 +47,10 @@ export function DocumentBrowser({
   const [error, setError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Refetches whenever any filter/search/page value changes.
+// "cancelled" guards against a race condition: if the user changes filters
+// again before the previous request finishes, we ignore the stale response
+// instead of letting it overwrite newer data.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
