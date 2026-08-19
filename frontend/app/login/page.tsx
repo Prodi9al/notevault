@@ -7,9 +7,11 @@ import { Eye, EyeOff, Library } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/Button";
 import { AuthShell } from "@/components/AuthShell";
+import { useAuth } from "@/components/AuthProvider";
 
 function LoginForm() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,6 +28,7 @@ function LoginForm() {
     setLoading(true);
     try {
       await api.login({ email, password });
+      await refresh();
       router.push("/");
       router.refresh();
     } catch (err) {

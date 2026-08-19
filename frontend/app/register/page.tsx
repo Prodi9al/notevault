@@ -7,6 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/Button";
 import { AuthShell } from "@/components/AuthShell";
+import { useAuth } from "@/components/AuthProvider";
 
 const REQUIREMENTS = [
   { label: "At least 8 characters", test: (v: string) => v.length >= 8 },
@@ -16,6 +17,7 @@ const REQUIREMENTS = [
 
 function RegisterForm() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +46,7 @@ function RegisterForm() {
     setLoading(true);
     try {
       await api.register({ full_name: fullName.trim(), email, password });
+      await refresh();
       router.push("/");
       router.refresh();
     } catch (err) {
