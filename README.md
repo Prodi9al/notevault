@@ -1,5 +1,10 @@
 # NoteVault
 
+[![Backend CI](https://github.com/Prodi9al/notevault/actions/workflows/backend.yml/badge.svg)](https://github.com/Prodi9al/notevault/actions/workflows/backend.yml)
+[![Frontend CI](https://github.com/Prodi9al/notevault/actions/workflows/frontend.yml/badge.svg)](https://github.com/Prodi9al/notevault/actions/workflows/frontend.yml)
+[![Docker Build](https://github.com/Prodi9al/notevault/actions/workflows/docker.yml/badge.svg)](https://github.com/Prodi9al/notevault/actions/workflows/docker.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Your notes. Your courses. One place.**
 
 NoteVault is a local-first, AWS-ready course notes & document-sharing platform.
